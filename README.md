@@ -146,7 +146,68 @@ t, err := template.New("table").Parse(goTableTemplate)
 err = t.Execute(w, &info)
 //Handle error
 ```	
+The complete handler function is show below:
+```
+func handlerData(w http.ResponseWriter, r \*http.Request) {
 
+	defer r.Body.Close()
+
+	//Create PageDetails object
+	var pd PageDetails
+
+	//Process post data (if present)
+	if r.Method == "POST" {
+		body, err := ioutil.ReadAll(r.Body)
+		//Handle error
+		
+		err = json.Unmarshal(body, &pd)
+		//Handle error
+	}
+
+	//Set PageDetails object parameters
+	pd.URL = "/data/"
+	pd.Target = "target"
+
+	//PreCalculate limit
+	pd.PreCalculate()
+
+	//Get all records total
+	totalAll, err := selectRecordsTotalAll()
+	//Handle error
+	pd.TotalAll = totalAll
+
+	//Get filtered records total
+	if len(pd.FilterTerms) > 0 {
+
+		totalFiltered, err := selectRecordsTotalFiltered(&pd)
+
+		if err != nil {
+			log.Printf("ERROR: handlerExampleselectRecordsTotalFiltered - %s\n", err)
+		}
+
+		pd.TotalFiltered = totalFiltered
+		pd.IsFiltered = true
+	}
+
+	//Calculate parameters
+	pd.Calculate()
+
+	//Get records
+	records, err := selectRecords(&pd)
+	//Handle error
+
+	info := make(map[string]interface{})
+	info["PageDetails"] = pd
+	info["Records"] = records
+
+	t, err := template.New("table").Parse(getTableTemplate)
+	//Handle error
+	
+	err = t.Execute(w, &info)
+	//Handle error
+
+}
+```
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details

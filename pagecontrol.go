@@ -138,7 +138,7 @@ func (pd *PageDetails) Calculate() {
 
 }
 
-func gowebtableTemplateGet() string {
+func TemplateGet() string {
 	template, _ := ioutil.ReadFile("table.html")
 	return string(template)
 }

@@ -76,7 +76,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-In the first part of the function, process the POST request. This is the data sent by the client in the page request:
+In the first part of the function, create the PageDetails object then process the POST request. This is the data sent by the client in the page request:
 ```
 	//Create PageDetails object
 	var pd PageDetails
@@ -94,7 +94,58 @@ In the first part of the function, process the POST request. This is the data se
 		}
 	}
 ```
+Now set the URL location and the target DIV name before launching the PreCalculate function, which sets options for the subsequent database queries:
+```
+//Set PageDetails object parameters
+pd.URL = "/data/"
+pd.Target = "target"
 
+//PreCalculate
+pd.PreCalculate()
+```
+Now get the count of the total records from the database. This will be your own function which performs a SELECT COUNT(\*) from the database. In this example the function is called selectRecordsTotalAll(). Add the total to TotalAll of the Page Details object:
+```
+//Get all records total
+totalAll, err := selectRecordsTotalAll()
+//Handle error
+pd.TotalAll = totalAll
+```
+Next we get the total for records but with filter applied, if filters are active, and setthe returned total to the TotalFiltered field of the Page Details object. If no filter terms are specified in the request, the TotalFiltered field is set to the same as Total
+```
+//Get filtered records total
+if len(pd.FilterTerms) > 0 {
+
+	totalFiltered, err := selectRecordsTotalFiltered(&pd)
+	//Handle error
+
+	pd.TotalFiltered = totalFiltered
+	pd.IsFiltered = true
+}
+```
+
+Now we know the total records we can calculate what offset is required for the main SQL query by running the Calculate function:
+```
+pd.Calculate()
+```
+Run the main records function. Here we pass the Page Details object to the function so it can build a SQL query with the offset and limit we need, as well as any order and filter options specified.
+```
+//Get records
+records, err := selectRecords(&pd)
+//Handle error
+}
+```
+Finally we pass the records and the Page Details object (via the info map object) into the GoWebTable HTML template, which is loaded by the getTableTemplate function. Once this is done, execute the template and pass to the writer:
+```
+info := make(map[string]interface{})
+info["PageDetails"] = pd
+info["Records"] = records
+
+t, err := template.New("table").Parse(goTableTemplate)
+//Handle error
+
+err = t.Execute(w, &info)
+//Handle error
+```	
 
 ## License
 

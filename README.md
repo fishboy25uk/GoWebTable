@@ -69,12 +69,15 @@ Create a HTML template which has a target DIV for where the table will go. This 
 </html>
 ```
 Now create a handler function for the table loader:
-```
 
+```
 func handlerData(w http.ResponseWriter, r *http.Request) {
 
-	defer r.Body.Close()
+}
+```
 
+In the first part of the function, process the POST request. This is the data sent by the client in the page request:
+```
 	//Create PageDetails object
 	var pd PageDetails
 
@@ -90,63 +93,8 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 			log.Printf("ERROR: handlerExample Unmarshal PageDetails - %s\n", err)
 		}
 	}
-
-	//Set PageDetails object parameters
-	pd.Table = "tbl"
-	pd.URL = "/data/"
-	pd.Target = "target"
-	pd.OrderDefaultElement = "name"
-
-	//PreCalculate limit
-	pd.PreCalculate()
-
-	//Get all records total
-	totalAll, err := selectRecordsTotalAll()
-	if err != nil {
-		log.Printf("ERROR: handlerExampleselectRecordsTotalAll - %s\n", err)
-	}
-	pd.TotalAll = totalAll
-
-	//Get filtered records total - CURRENTLY INACTIVE
-	if len(pd.FilterTerms) > 0 {
-
-		totalFiltered, err := selectRecordsTotalFiltered(&pd)
-
-		if err != nil {
-			log.Printf("ERROR: handlerExampleselectRecordsTotalFiltered - %s\n", err)
-		}
-
-		pd.TotalFiltered = totalFiltered
-		pd.IsFiltered = true
-	} else {
-		pd.TotalFiltered = pd.TotalAll
-		pd.IsFiltered = false
-	}
-
-	//Calculate parameters
-	pd.Calculate()
-
-	//Get records
-	records, err := selectRecords(&pd)
-	if err != nil {
-		log.Printf("ERROR: handlerExample selectRecords - %s\n", err)
-	}
-
-	info := make(map[string]interface{})
-	info["PageDetails"] = pd
-	info["Records"] = records
-
-	t, err := template.New("table").Parse(goTableTemplate)
-	if err != nil {
-		log.Printf("ERROR: handlerExample Parse Template - %s\n", err)
-	}
-	err = t.Execute(w, &info)
-	if err != nil {
-		log.Printf("ERROR: handlerExample Execute Template - %s\n", err)
-	}
-
-}
 ```
+
 
 ## License
 

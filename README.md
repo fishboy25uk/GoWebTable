@@ -1,6 +1,10 @@
 # GoWebTable
 
-Go library to help create interactive DB-based data tables for web applications written in Go (Golang)
+Go library to help create interactive DB-based data tables for web applications written in Go (Golang).
+
+![Alt text](/img/screenshot1.jpg?raw=true "Data Table Screenshot")
+
+GoWebTables feature ordering, pagination and (currently) filtering on a pre-specified field.
 
 ## Getting Started
 
@@ -258,6 +262,9 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 
 }
 ```
+## Example
+See example_test.go for a full example of how to create a data table. This example uses CrateDB for the database, but any MySQL compatible DB should be usable.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details

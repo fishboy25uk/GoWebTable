@@ -1,6 +1,6 @@
 # GoWebTable
 
-Go library to help create interactive DB-based data tables for web applications written in Go (Golang).
+Go library to dynamically create interactive database-based data tables for Go (Golang) web applications.
 
 ![Data Table Screenshot](/img/Screenshot1.png?raw=true "Data Table Screenshot")
 

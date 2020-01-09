@@ -1,4 +1,4 @@
-package gowebtable
+package main
 
 import (
 	"database/sql"
@@ -10,13 +10,14 @@ import (
 	"strings"
 	"text/template"
 
+	gwt "github.com/fishboy25uk/gowebtable"
+	"github.com/fatih/structs"
 	"github.com/gorilla/mux"
 	_ "github.com/herenow/go-crate"
 )
 
 var (
-	crateURL = "http://192.168.130.108:4201"
-
+	crateURL = "http://xxx.xxx.xxx.xxx:xxx"
 	db *sql.DB
 )
 
@@ -28,17 +29,16 @@ type Record struct {
 }
 
 func init() {
-
+	//Open DB
 	dbTemp, err := sql.Open("crate", crateURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	db = dbTemp
-
 }
 
 func handlerIndex(w http.ResponseWriter, r *http.Request) {
-
+	
 	defer r.Body.Close()
 
 	info := make(map[string]interface{})
@@ -48,15 +48,22 @@ func handlerIndex(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ERROR: handlerIndex ExecuteTemplate - %s\n", err)
 	}
-
+	
 }
 
 func handlerData(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
+	//Define fields for table
+	fields := []gwt.TableField{
+		{Name: "id", Title: "ID", DBName: "id", Type: "string"},
+		{Name: "name", Title: "Name", DBName: "name", Type: "string"},
+		{Name: "type", Title: "Type", DBName: "type", Type: "string"},
+	}
+
 	//Create PageDetails object
-	var pd PageDetails
+	var pd gwt.PageDetails
 
 	//Process post data (if present)
 	if r.Method == "POST" {
@@ -75,6 +82,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 	pd.URL = "/data/"
 	pd.Target = "target"
 	pd.OrderDefaultElement = "name"
+	pd.FilterDefaultElement = "name"
 
 	//PreCalculate limit
 	pd.PreCalculate()
@@ -86,7 +94,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 	}
 	pd.TotalAll = totalAll
 
-	//Get filtered records total - CURRENTLY INACTIVE
+	//Get filtered records total
 	if len(pd.FilterTerms) > 0 {
 
 		totalFiltered, err := selectRecordsTotalFiltered(&pd)
@@ -97,6 +105,8 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 
 		pd.TotalFiltered = totalFiltered
 		pd.IsFiltered = true
+	} else {
+		pd.TotalFiltered = totalAll
 	}
 
 	//Calculate parameters
@@ -108,17 +118,22 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 		log.Printf("ERROR: handlerExample selectRecords - %s\n", err)
 	}
 
+	//Convert records into a map slice
+	var recordsSlice [][]interface{}
+	for r := range records {
+		recordsSlice = append(recordsSlice, structs.Values(records[r]))
+	}
+
 	info := make(map[string]interface{})
 	info["PageDetails"] = pd
-	info["Records"] = records
+	info["Fields"] = fields
+	info["Records"] = recordsSlice
 
-	//t := template.Must(template.ParseFiles(loadPage))
-	//err = t.ExecuteTemplate(w, loadPage, &info)
-
-	t, err := template.New("table").Parse(gowebtableTemplateGet())
+	t, err := template.New("table").Parse(gwt.TemplateGet())
 	if err != nil {
 		log.Printf("ERROR: handlerExample Parse Template - %s\n", err)
 	}
+
 	err = t.Execute(w, &info)
 	if err != nil {
 		log.Printf("ERROR: handlerExample Execute Template - %s\n", err)
@@ -126,7 +141,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func selectRecords(pd *PageDetails) ([]Record, error) {
+func selectRecords(pd *gwt.PageDetails) ([]Record, error) {
 
 	//Create records slice
 	var records []Record
@@ -172,7 +187,7 @@ func selectRecords(pd *PageDetails) ([]Record, error) {
 	//Build SQL string
 	sql := fmt.Sprintf("SELECT id,name,type FROM records%s%s%s", filterString, ordersString, paginationString)
 
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	//Perform SQL query
 	rows, err := db.Query(sql)
@@ -203,7 +218,7 @@ func selectRecordsTotalAll() (int, error) {
 
 	//Build SQL string
 	sql := fmt.Sprintf("SELECT COUNT(*) FROM records")
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	//Perform SQL query
 	var count int
@@ -217,7 +232,7 @@ func selectRecordsTotalAll() (int, error) {
 
 }
 
-func selectRecordsTotalFiltered(pd *PageDetails) (int, error) {
+func selectRecordsTotalFiltered(pd *gwt.PageDetails) (int, error) {
 
 	//Filter Terms
 	filterString := ""
@@ -238,7 +253,7 @@ func selectRecordsTotalFiltered(pd *PageDetails) (int, error) {
 
 	//Build SQL string
 	sql := fmt.Sprintf("SELECT COUNT(*) FROM records%s", filterString)
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	//Perform SQL query
 	var count int
@@ -253,13 +268,9 @@ func selectRecordsTotalFiltered(pd *PageDetails) (int, error) {
 }
 
 func main() {
-
 	r := mux.NewRouter()
-	// Routes consist of a path and a handler function.
 	r.HandleFunc("/", handlerIndex)
 	r.HandleFunc("/data/", handlerData)
 
-	// Bind to a port and pass our router in
 	log.Fatal(http.ListenAndServe(":80", r))
-
 }

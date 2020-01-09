@@ -263,7 +263,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 }
 ```
 ## Example
-See example_test.go for a full example of how to create a data table. This example uses CrateDB for the database, but any MySQL compatible DB should be usable.
+See [example_test.go](example_test.go) for a full example of how to create a data table. This example uses CrateDB for the database, but any MySQL compatible DB should be usable.
 
 ## License
 

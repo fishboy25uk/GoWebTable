@@ -1,0 +1,379 @@
+<div class="gowebtable">
+    <div class="gowebtable-header">
+        <div class="gowebtable-status">
+            Showing records {{.PageDetails.RecordFirst}} to {{.PageDetails.RecordLast}} of
+            {{.PageDetails.TotalFiltered}}
+            records
+        </div>
+        <div class="gowebtable-controls">
+            <input type="text" class="gowebtable-filter" id="tbl_Filter" />
+            <span id="tbl_btnFilterSearch" class="gowebtable-btn gowebtable-filter-search-btn">Search</span>
+            <span id="tbl_btnFilterClear" class="gowebtable-btn gowebtable-filter-clear-btn">Clear</span>
+            {{if .Filtered}}
+            <span id="tbl_Filtered" class="border-green p-1">Filtered</span>
+            {{end}}
+            <span>
+                <select id="tbl_Limit" class="gowebtable-limit">
+                    {{range .PageDetails.LimitOptions}}
+                    <option>{{.}}</option>
+                    {{end}}
+                </select>
+            </span>
+            <span id="tbl_btnFirst" class="gowebtable-btn">First</span>
+            <span id="tbl_btnPrevious" class="gowebtable-btn">Previous</span>
+            <span id="tbl_btnNext" class="gowebtable-btn">Next</span>
+            <span id="tbl_btnLast" class="gowebtable-btn">Last</span>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+
+    <table id="tbl" class="gowebtable-table">
+        <thead>
+            <tr>
+                {{range .Fields}}
+                <th col="{{.DBName}}" sort="">{{.Title}}<span class="gowebtable-icon-container">
+                        <div class="gowebtable-icon"></div>
+                    </span></th>
+                {{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{if ne .PageDetails.TotalFiltered 0}}
+            {{range .Records}}
+            <tr>
+                {{range .}}
+                <td>{{ . }}</td>
+                {{end}}
+            </tr>
+            {{end}}
+            {{end}}
+        </tbody>
+    </table>
+
+    {{if eq .PageDetails.TotalFiltered 0}}
+    <table class="gowebtable-table">
+        <tr>
+            <td>No records</td>
+        </tr>
+    </table>
+    {{end}}
+
+</div>
+
+
+<style>
+    .gowebtable-limit {
+        font-size: 1.0em;
+        line-height: 1.3;
+        padding: .4em 2.2em .4em .4em;
+        box-sizing: border-box;
+        margin: 0;
+        border: 1px solid #ccc;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: #fff;
+        background:
+            url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABXElEQVR4nO3XK0tEURSG4VcFL6DBYLEZtBltVkEQ0WYXm2CdPyA2sRgGs5i0Ttai0WjRIngZvIBBGFBHw5YD4ui5zN5re8bvgdXXe8pZG0RERERERERERER+twjcAu9/bK6B+YDdibsIcVmnHrA7cRMpLstcBexOzAGvEeLS5gWYDdj9xapBUN5ZCVrcwqanxX3MRuDWlrqA/QLL+p69z12i6AeOUxYMOUdAX/DKFCPAOfbxZ8CwQV8m48A9dvF1YMykLIdpoEH4+GdgyqgptyWgSbj4N2DBrKagCuE+wJphR1uq+I/fMi1oUw9Qw1/8AdBtWuDBIHBK+/EnwIDx7t6MApcUj7/A3RmlNgk8kT/+AZiIsG8QM7jnatb4Bu6u6CjLZItv4u6JjrRO+geoRNvOyC4/x1cj7mWmFzjke3wNdz/8C0PADvCIe0VuU+J/vYiIiIiIiIiIiJTHB1l5L6lfXsFFAAAAAElFTkSuQmCC) no-repeat scroll 0 0 transparent;
+        background-position: right .3em top 50%, 0 0;
+        background-size: 1.0em auto, 100%;
+        margin-right: 3em;
+    }
+
+    .gowebtable-filter {
+        font-size: 1.0em;
+        line-height: 1.3;
+        padding: .4em 2.2em .4em .4em;
+        box-sizing: border-box;
+        margin: 0;
+        border: 1px solid #ccc;
+    }
+
+    .gowebtable-filter-clear-btn {
+        margin-right: 3em;
+    }
+
+    .gowebtable {
+        font-family: 'Open Sans', 'Helvetica Neue', 'Segoe UI', 'Calibri', 'Arial', sans-serif;
+        font-size: 0.7em;
+    }
+
+    .gowebtable-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .gowebtable-header {
+        margin-bottom: 6px;
+    }
+
+    .gowebtable-status {
+        float: left;
+        line-height: 24px;
+    }
+
+    .gowebtable-controls {
+        float: right;
+    }
+
+    .gowebtable td,
+    .gowebtable th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    .gowebtable tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .gowebtable tr:hover {
+        background-color: #ddd;
+    }
+
+    .gowebtable th {
+        line-height: 20px;
+        text-align: left;
+        background-color: rgb(180, 180, 180);
+        color: white;
+        cursor: pointer;
+    }
+
+    .gowebtable-th-highlight {
+        background-color: rgb(150, 150, 150) !important;
+    }
+
+    .gowebtable-btn {
+        display: inline-block;
+        padding: 4px;
+        border: solid 1px #ccc;
+        background: #eee;
+        cursor: pointer;
+        text-align: center;
+        width: 60px;
+        user-select: none;
+    }
+
+    .gowebtable-faded {
+        opacity: 0.5;
+        cursor: inherit;
+    }
+
+    .gowebtable-bg-highlight {
+        background-color: rgb(251, 245, 70);
+    }
+
+    .gowebtable-icon-container {
+        float: right;
+        position: relative;
+    }
+
+    .gowebtable-icon {
+        width: 20px;
+        height: 20px;
+        position: absolute;
+        top: 0px;
+        right: 0px;
+    }
+
+    .gowebtable-arrow-down {
+        background:
+            url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABXElEQVR4nO3XK0tEURSG4VcFL6DBYLEZtBltVkEQ0WYXm2CdPyA2sRgGs5i0Ttai0WjRIngZvIBBGFBHw5YD4ui5zN5re8bvgdXXe8pZG0RERERERERERER+twjcAu9/bK6B+YDdibsIcVmnHrA7cRMpLstcBexOzAGvEeLS5gWYDdj9xapBUN5ZCVrcwqanxX3MRuDWlrqA/QLL+p69z12i6AeOUxYMOUdAX/DKFCPAOfbxZ8CwQV8m48A9dvF1YMykLIdpoEH4+GdgyqgptyWgSbj4N2DBrKagCuE+wJphR1uq+I/fMi1oUw9Qw1/8AdBtWuDBIHBK+/EnwIDx7t6MApcUj7/A3RmlNgk8kT/+AZiIsG8QM7jnatb4Bu6u6CjLZItv4u6JjrRO+geoRNvOyC4/x1cj7mWmFzjke3wNdz/8C0PADvCIe0VuU+J/vYiIiIiIiIiIiJTHB1l5L6lfXsFFAAAAAElFTkSuQmCC) no-repeat scroll 0 0 transparent;
+        background-size: 20px;
+    }
+
+    .gowebtable-arrow-up {
+        background:
+            url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABXElEQVR4nO3XK0tEURSG4VcFL6DBYLEZtBltVkEQ0WYXm2CdPyA2sRgGs5i0Ttai0WjRIngZvIBBGFBHw5YD4ui5zN5re8bvgdXXe8pZG0RERERERERERER+twjcAu9/bK6B+YDdibsIcVmnHrA7cRMpLstcBexOzAGvEeLS5gWYDdj9xapBUN5ZCVrcwqanxX3MRuDWlrqA/QLL+p69z12i6AeOUxYMOUdAX/DKFCPAOfbxZ8CwQV8m48A9dvF1YMykLIdpoEH4+GdgyqgptyWgSbj4N2DBrKagCuE+wJphR1uq+I/fMi1oUw9Qw1/8AdBtWuDBIHBK+/EnwIDx7t6MApcUj7/A3RmlNgk8kT/+AZiIsG8QM7jnatb4Bu6u6CjLZItv4u6JjrRO+geoRNvOyC4/x1cj7mWmFzjke3wNdz/8C0PADvCIe0VuU+J/vYiIiIiIiIiIiJTHB1l5L6lfXsFFAAAAAElFTkSuQmCC) no-repeat scroll 0 0 transparent;
+        background-size: 20px;
+        transform: rotate(180deg);
+    }
+
+    .clearfix::after {
+        content: "";
+        clear: both;
+        display: table;
+    }
+</style>
+
+<script>
+
+    var tbl = '{{.PageDetails.Table}}';
+    var url = '{{.PageDetails.URL}}';
+    var target = '{{.PageDetails.Target}}';
+    var page = '{{.PageDetails.Page}}';
+    var pagePrevious = '{{.PageDetails.PagePrevious}}';
+    var pageNext = '{{.PageDetails.PageNext}}';
+    var pageCount = '{{.PageDetails.PageCount}}';
+    var limit = '{{.PageDetails.Limit}}';
+    var orderElement = '{{ with (index .PageDetails.OrderTerms 0) }}{{ .Element }}{{ end }}';
+    var orderDirection = '{{ with (index .PageDetails.OrderTerms 0) }}{{ .Direction }}{{ end }}';
+
+    
+    var filterElement = '{{.PageDetails.FilterDefaultElement}}';
+    var filterTerm = '';
+    {{if .PageDetails.IsFiltered}}
+    filterTerm = '{{ with (index .PageDetails.FilterTerms 0) }}{{ .Term }}{{ end }}';
+    $('#' + tbl + '_Filter').addClass('gowebtable-bg-highlight');
+    {{ end }}
+
+    function removeClass(id, style) {
+        var element = document.getElementById(id);
+        element.classList.remove(style);
+    }
+
+    function addClass(id, style) {
+        var element = document.getElementById(id);
+        element.classList.add(style);
+    }
+
+    function replaceClass(id, styleRemove, styleAdd) {
+        var element = document.getElementById(id);
+        element.classList.remove(styleRemove);
+        element.classList.add(styleAdd);
+    }
+
+    function doSortPrepare() {
+
+        //Click function headers
+        $('#' + tbl + ' th').click(function () {
+            col = $(this).attr('col');
+            if (col.length > 0) { //Filter out blank servers
+
+                //Do direction
+                if (col == orderElement && orderDirection == 'asc') {
+                    orderDirection = 'desc'
+                } else {
+                    orderDirection = 'asc'
+                }
+                orderElement = col;
+                doPost();
+            }
+        });
+
+        //Limit
+        $('#' + tbl + '_Limit').val(limit); //Set initial value
+        $('#' + tbl + '_Limit').change(function () {
+            limit = $('#' + tbl + '_Limit').val();
+            page = 1;
+            doPost();
+        });
+
+        //Filter
+        $('#' + tbl + '_Filter').val(filterTerm); //Set initial value
+        $('#' + tbl + '_Filter').attr('element',filterElement); //Set initial value
+
+        //btnFirst
+        if (page != 1) {
+            $('#' + tbl + '_btnFirst').click(function () {
+                page = 1;
+                doPost();
+            });
+        } else {
+            $('#' + tbl + '_btnFirst').addClass('gowebtable-faded');
+        };
+
+        //btnPrevious
+        if (pagePrevious > 0) {
+            $('#' + tbl + '_btnPrevious').click(function () {
+                page = pagePrevious;
+                doPost();
+            });
+        } else {
+            $('#' + tbl + '_btnPrevious').addClass('gowebtable-faded');
+        };
+
+        //btnNext
+        if (pageNext != page) {
+            $('#' + tbl + '_btnNext').click(function () {
+                page = pageNext;
+                doPost();
+            });
+        } else {
+            $('#' + tbl + '_btnNext').addClass('gowebtable-faded');
+        };
+
+        //btnLast
+        if (page != pageCount) {
+            $('#' + tbl + '_btnLast').click(function () {
+                page = pageCount;
+                doPost();
+            });
+        } else {
+            $('#' + tbl + '_btnLast').addClass('gowebtable-faded');
+        };
+
+        //Filter
+        $('#' + tbl + '_btnFilterSearch').click(function () {
+            //filterElement = $('#' + tbl + '_Filter').attr('element');
+            filterTerm = $('#' + tbl + '_Filter').val();
+            doPost();
+        });
+
+
+        $('#' + tbl + '_btnFilterClear').click(function () {
+            filterTerm = '';
+            doPost();
+        });
+
+        //Arrows
+        $('#' + tbl + ' th').each(function (index, element) {
+            col = $(this).attr('col');
+            if (col == orderElement) {
+                $(this).addClass('gowebtable-th-highlight');
+                if (orderDirection == 'asc') {
+                    $(this).find("div").addClass('gowebtable-arrow-up');
+                } else {
+                    $(this).find("div").addClass('gowebtable-arrow-down');
+                }
+            }
+        });
+
+    }
+
+    doSortPrepare();
+
+    function doPost() {
+
+        //Filter Terms
+        var filterTermsArray = [];
+        if (filterTerm != '') {
+
+           // filterElement = $('#' + tbl + '_Filter').attr('element');
+            //alert(filterElement);
+            //filterTerm = $('#' + tbl + '_Filter').val();
+        
+            filterTermsArray = [{ 'element': filterElement, 'term': filterTerm }]
+        }
+
+        //Order Terms
+        if (orderElement != '') {
+            var orderTermsArray = [{ 'element': orderElement, 'direction': orderDirection }]
+        }
+
+        //Build JSON
+        var data = JSON.stringify({
+            'orderterms': orderTermsArray,
+            'filterterms': filterTermsArray,
+            'page': parseInt(page),
+            'limit': parseInt(limit),
+        })
+
+        console.log(data);
+
+        $.ajax({
+            url: url,
+            type: 'post',
+            contentType: 'application/json',
+            data: data,
+            processData: false,
+            success: function (data, textStatus, jQxhr) {
+                $('#' + target).html(data);
+            },
+            error: function (jqXhr, textStatus, errorThrown) {
+                console.log(errorThrown);
+            }
+        });
+
+    }
+
+</script>

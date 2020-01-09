@@ -1,4 +1,4 @@
-package main
+package gowebtable
 
 import (
 	"database/sql"

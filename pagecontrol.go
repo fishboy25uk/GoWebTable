@@ -1,13 +1,8 @@
 package gowebtable
 
 import (
-	"io/ioutil"
 	"math"
 )
-
-//var (
-//	gowebtableTemplate string
-//)
 
 //PageDetails defines the struct for pageination control information
 type PageDetails struct {
@@ -17,6 +12,8 @@ type PageDetails struct {
 
 	FilterTerms []FilterTerm `json:"filterterms,omitempty"`
 	OrderTerms  []OrderTerm  `json:"orderterms,omitempty"`
+
+	FilterDefaultElement string
 
 	OrderDefaultElement   string
 	OrderDefaultDirection string
@@ -47,21 +44,14 @@ type FilterTerm struct {
 	Term    string `json:"term"`
 }
 
-//func init() {
-//	f, err := ioutil.ReadFile("table.html")
-//	if err != nil {
-//		log.Printf("ERROR: Template load failed - %s\n", err)
-//	}
-//	gowebtableTemplate = string(f)
-//}
-
 //OrderTerm defines the struct for an order term record
 type OrderTerm struct {
 	Element   string `json:"element,omitempty"`
 	Direction string `json:"direction,omitempty"`
 }
 
-//PreCalculate performs a calculation of the offset prior to gathering records
+//PreCalculate performs a calculation of the offset prior to gathering records.
+//This should be called after getting request details from the client but before starting to get totals or records from the database.
 func (pd *PageDetails) PreCalculate() {
 
 	pd.Table = "tbl"
@@ -85,7 +75,6 @@ func (pd *PageDetails) PreCalculate() {
 		pd.LimitOptions = []int{5, 10, 25, 50, 100, 250, 500, 1000}
 	}
 
-	//offset := (fo.Page - 1) * fo.Limit
 	pd.Offset = (pd.Page - 1) * pd.Limit
 
 	//Add default sort
@@ -102,12 +91,14 @@ func (pd *PageDetails) PreCalculate() {
 
 }
 
-//Calculate performs a calculation of all the page and record count details prior to display
+//Calculate performs a calculation of all the page and record count details prior to display.
+//This should be called after totals have been gathered but prior to getting records. Limit and offset from this record should be passed into the database query.
 func (pd *PageDetails) Calculate() {
 
 	//Record First
 	pd.RecordFirst = pd.Offset + 1
 
+	//Calculate page count
 	pd.PageCount = int(math.Ceil(float64(pd.TotalFiltered) / float64(pd.Limit)))
 
 	//For no records
@@ -116,6 +107,7 @@ func (pd *PageDetails) Calculate() {
 		pd.RecordFirst = 0
 	}
 
+	//Calculate the current page
 	pd.Page = int(1 + (float64(pd.Offset) / float64(pd.Limit)))
 
 	//Record Last
@@ -136,9 +128,4 @@ func (pd *PageDetails) Calculate() {
 		pd.PageNext = pd.PageCount
 	}
 
-}
-
-func TemplateGet() string {
-	template, _ := ioutil.ReadFile("table.html")
-	return string(template)
 }

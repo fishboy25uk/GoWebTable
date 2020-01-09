@@ -2,7 +2,7 @@
 
 Go library to help create interactive DB-based data tables for web applications written in Go (Golang).
 
-![Alt text](/img/screenshot1.jpg?raw=true "Data Table Screenshot")
+![Data Table Screenshot](/img/Screenshot1.png?raw=true "Data Table Screenshot")
 
 GoWebTables feature ordering, pagination and (currently) filtering on a pre-specified field.
 

@@ -4,7 +4,9 @@ Go library to dynamically create interactive database-based data tables for Go (
 
 ![Data Table Screenshot](/img/Screenshot1.png?raw=true "Data Table Screenshot")
 
-GoWebTables feature ordering, pagination and (currently) filtering on a pre-specified field.
+GoWebTables feature ordering, pagination and global term search.
+
+NOTE: THIS PROJECT IS IN DEVELOPMENT
 
 ## Getting Started
 
@@ -149,6 +151,12 @@ t, err := template.New("table").Parse(gwt.TemplateGet())
 
 err = t.Execute(w, &info)
 //Handle error
+```
+## Options
+### Custom Limit Options
+To specify custom limit options, add the following after creating the PageDetails object (substituting your own values):
+```
+pd.LimitOptions = []int{2, 5, 10, 20, 30, 50, 100}
 ```
 ## Example
 See [example_test.go](example_test.go) for a full example of how to create a data table. This example uses CrateDB for the database, but any MySQL compatible DB should be usable.

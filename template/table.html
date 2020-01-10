@@ -2,55 +2,72 @@
     <div class="gowebtable-header">
         <div class="gowebtable-status">
             Showing records {{.PageDetails.RecordFirst}} to {{.PageDetails.RecordLast}} of
-            {{.PageDetails.TotalFiltered}}
+            {{.PageDetails.RecordsTotal}}
             records
         </div>
         <div class="gowebtable-controls">
-            <input type="text" class="gowebtable-filter" id="tbl_Filter" />
-            <span id="tbl_btnFilterSearch" class="gowebtable-btn gowebtable-filter-search-btn">Search</span>
-            <span id="tbl_btnFilterClear" class="gowebtable-btn gowebtable-filter-clear-btn">Clear</span>
+            <input type="text" class="gowebtable-filter" id="tbl_{{.PageDetails.Table}}_GlobalFilter" />
+            <span id="tbl_{{.PageDetails.Table}}_btnGlobalFilterSearch"
+                class="gowebtable-btn gowebtable-filter-search-btn">Search</span>
+            <span id="tbl_{{.PageDetails.Table}}_btnGlobalFilterClear"
+                class="gowebtable-btn gowebtable-filter-clear-btn">Clear</span>
             {{if .Filtered}}
-            <span id="tbl_Filtered" class="border-green p-1">Filtered</span>
+            <span id="tbl_{{.PageDetails.Table}}_Filtered" class="border-green p-1">Filtered</span>
             {{end}}
             <span>
-                <select id="tbl_Limit" class="gowebtable-limit">
+                <select id="tbl_{{.PageDetails.Table}}_Limit" class="gowebtable-limit">
                     {{range .PageDetails.LimitOptions}}
                     <option>{{.}}</option>
                     {{end}}
                 </select>
             </span>
-            <span id="tbl_btnFirst" class="gowebtable-btn">First</span>
-            <span id="tbl_btnPrevious" class="gowebtable-btn">Previous</span>
-            <span id="tbl_btnNext" class="gowebtable-btn">Next</span>
-            <span id="tbl_btnLast" class="gowebtable-btn">Last</span>
+            <span id="tbl_{{.PageDetails.Table}}_btnFirst" class="gowebtable-btn">First</span>
+            <span id="tbl_{{.PageDetails.Table}}_btnPrevious" class="gowebtable-btn">Previous</span>
+            <span id="tbl_{{.PageDetails.Table}}_btnNext" class="gowebtable-btn">Next</span>
+            <span id="tbl_{{.PageDetails.Table}}_btnLast" class="gowebtable-btn">Last</span>
         </div>
         <div class="clearfix"></div>
     </div>
 
-    <table id="tbl" class="gowebtable-table">
+    <table id="tbl_{{.PageDetails.Table}}" class="gowebtable-table">
         <thead>
             <tr>
-                {{range .Fields}}
-                <th col="{{.DBName}}" sort="">{{.Title}}<span class="gowebtable-icon-container">
-                        <div class="gowebtable-icon"></div>
+                {{range .PageDetails.Fields}}
+                <th col="{{.Name}}" sort="">{{.Header}}<span class="gowebtable-icon-container">
+                        <div id="tbl_{{$.PageDetails.Table}}_{{.Name}}_icon" class="gowebtable-icon"></div>
                     </span></th>
                 {{end}}
             </tr>
+            {{if eq .PageDetails.FieldFiltersEnabled true}}
+            <tr>
+                
+                {{range .PageDetails.Fields}}
+                {{if not .Hide}}
+                <td>
+                    <div style="position:relative;">
+                        <div id="tbl{{$.PageDetails.Table}}_fb_{{.Name}}" name="{{.Name}}" type="{{.Type}}" class="tblFilterBox"
+                            onmouseleave="$(this).hide();"></div>
+                        <i id="tbl{{$.PageDetails.Table}}_fb_{{.Name}}_icon" name="{{.Name}}" type="{{.Type}}"
+                            class="tblFilterBoxBtn ml-1 fas fa-filter pointer"></i>
+                    </div>
+                </td>
+                {{end}}
+                {{end}}
+            </tr>
+            {{end}}
         </thead>
         <tbody>
-            {{if ne .PageDetails.TotalFiltered 0}}
-            {{range .Records}}
+            {{if ne .PageDetails.RecordsTotal 0}}
+            {{range .PageDetails.Results}}
             <tr>
-                {{range .}}
-                <td>{{ . }}</td>
-                {{end}}
+                {{range .}}<td>{{.}}</td>{{end}}
             </tr>
             {{end}}
             {{end}}
         </tbody>
     </table>
 
-    {{if eq .PageDetails.TotalFiltered 0}}
+    {{if eq .PageDetails.RecordsTotal 0}}
     <table class="gowebtable-table">
         <tr>
             <td>No records</td>
@@ -62,6 +79,11 @@
 
 
 <style>
+    .gowebtable {
+        font-family: 'Open Sans', 'Helvetica Neue', 'Segoe UI', 'Calibri', 'Arial', sans-serif;
+        font-size: 0.7em;
+    }
+
     .gowebtable-limit {
         font-size: 1.0em;
         line-height: 1.3;
@@ -91,11 +113,6 @@
 
     .gowebtable-filter-clear-btn {
         margin-right: 3em;
-    }
-
-    .gowebtable {
-        font-family: 'Open Sans', 'Helvetica Neue', 'Segoe UI', 'Calibri', 'Arial', sans-serif;
-        font-size: 0.7em;
     }
 
     .gowebtable-table {
@@ -162,6 +179,10 @@
         background-color: rgb(251, 245, 70);
     }
 
+    .gowebtable-text-red {
+        color: rgb(255, 30, 30);
+    }
+
     .gowebtable-icon-container {
         float: right;
         position: relative;
@@ -197,24 +218,6 @@
 
 <script>
 
-    var tbl = '{{.PageDetails.Table}}';
-    var url = '{{.PageDetails.URL}}';
-    var target = '{{.PageDetails.Target}}';
-    var page = '{{.PageDetails.Page}}';
-    var pagePrevious = '{{.PageDetails.PagePrevious}}';
-    var pageNext = '{{.PageDetails.PageNext}}';
-    var pageCount = '{{.PageDetails.PageCount}}';
-    var limit = '{{.PageDetails.Limit}}';
-    var orderElement = '{{ with (index .PageDetails.OrderTerms 0) }}{{ .Element }}{{ end }}';
-    var orderDirection = '{{ with (index .PageDetails.OrderTerms 0) }}{{ .Direction }}{{ end }}';
-
-    
-    var filterElement = '{{.PageDetails.FilterDefaultElement}}';
-    var filterTerm = '';
-    {{if .PageDetails.IsFiltered}}
-    filterTerm = '{{ with (index .PageDetails.FilterTerms 0) }}{{ .Term }}{{ end }}';
-    $('#' + tbl + '_Filter').addClass('gowebtable-bg-highlight');
-    {{ end }}
 
     function removeClass(id, style) {
         var element = document.getElementById(id);
@@ -232,148 +235,278 @@
         element.classList.add(styleAdd);
     }
 
+
+    var pageDetailsJSON = '{{.PageDetails.JSON}}';
+    pd = JSON.parse(pageDetailsJSON);
+
+
     function doSortPrepare() {
 
+        tbl = pd.table;
+
+        //Set Global Filter
+        $('#tbl_' + tbl + '_GlobalFilter').val(pd.globalfilterterm);
+
+        //Highlight global filter term search
+        if (pd.globalfilterterm.length > 0) {
+            term = pd.globalfilterterm.toLowerCase();
+            var cells = document.getElementsByTagName("td");
+            for (var i = 0; i < cells.length; i++) {
+                if (cells.item(i).innerHTML.toLowerCase().includes(term)) {
+                    cells.item(i).classList.add('gowebtable-text-red');
+                }
+            }
+        }
+
         //Click function headers
-        $('#' + tbl + ' th').click(function () {
+        $('#tbl_' + tbl + ' th').click(function () {
             col = $(this).attr('col');
             if (col.length > 0) { //Filter out blank servers
-
+                $('.loader').fadeIn(100); //Load loader
                 //Do direction
-                if (col == orderElement && orderDirection == 'asc') {
-                    orderDirection = 'desc'
+                if (col == pd.orderelement && pd.orderdirection == 'asc') {
+                    dir = 'desc'
                 } else {
-                    orderDirection = 'asc'
+                    dir = 'asc'
                 }
-                orderElement = col;
-                doPost();
+                pd.orderelement = col;
+                pd.orderdirection = dir;
+
+                processPost();
             }
         });
 
+        //Status
+        $('#tbl_' + tbl + '_Status').html('Page ' + pd.pagecurrent + ' of ' + pd.pagecount + ' (Records ' + pd.recordfirst + ' to ' + pd.recordlast + ' of ' + pd.recordstotal + ')')
+
         //Limit
-        $('#' + tbl + '_Limit').val(limit); //Set initial value
-        $('#' + tbl + '_Limit').change(function () {
-            limit = $('#' + tbl + '_Limit').val();
-            page = 1;
-            doPost();
+        $('#tbl_' + tbl + '_Limit').val(pd.limit); //Set initial value
+
+        //Limit change
+        $('#tbl_' + tbl + '_Limit').change(function () {
+            $('.loader').fadeIn(100);
+            pd.limit = $('#tbl_' + tbl + '_Limit').val();
+            processPost();
         });
 
-        //Filter
-        $('#' + tbl + '_Filter').val(filterTerm); //Set initial value
-        $('#' + tbl + '_Filter').attr('element',filterElement); //Set initial value
+        //Global Filter Search
+        $('#tbl_' + tbl + '_btnGlobalFilterSearch').click(function () {
+            //$('.loader').fadeIn(100);
+            processPost();
+        });
+        $('#tbl_' + tbl + '_GlobalFilter').on('keypress', function (e) {
+            if (e.which == 13) {
+                processPost();
+            }
+        });
+
+        //Global Filter Clear
+        $('#tbl_' + tbl + '_btnGlobalFilterClear').click(function () {
+            $('#tbl_' + tbl + '_GlobalFilter').val(''); //Blank global box
+            //Iterate and check all field filter checkboxes
+            $('.tbl_fb_cb').each(function () {
+                $(this).prop('checked', true);
+            });
+            //Iterate and remove marker from filter buttons
+            $('.tblFilterBoxBtn').each(function () {
+                $(this).removeClass('gowebtable-text-red');
+            });
+            processPost(); //Resubmit
+        });
+  
+        //Arrows
+        $('#tbl_' + tbl + ' th').each(function (index, element) {
+            col = $(this).attr('col');
+            if (col == pd.orderelement) {
+                if (pd.orderdirection == 'asc') {
+                    $('#tbl_' + tbl + '_' + col + '_icon').addClass('gowebtable-arrow-up');
+                } else {
+                    $('#tbl_' + tbl + '_' + col + '_icon').addClass('gowebtable-arrow-down');
+                }
+            }
+        });
+
+        //FIELD FILTER------------------------------------------------
+
+        //Set Field Filter Options
+        if (pd.fieldfilterterms != null) {
+
+            //Populate map with field names and type
+            var map = new Map();
+            for (i = 0; i < pd.fieldfilterterms.length; i++) {
+                map.set(pd.fieldfilterterms[i].field, pd.fieldfilterterms[i].fieldtype); //Populate array
+            }
+
+            //Iterate map
+            for (let [field, fieldtype] of map) {
+                $('#tbl_' + tbl + '_fb_' + field).html('Loading'); //Loading placeholder
+                $('#tbl_' + tbl + '_fb_' + field).load('/filterbox/' + fieldtype + '/' + field, function () { //Load filberbox
+                    $('.tbl_' + tbl + '_fb_cb_' + field).prop('checked', false); //Deselect checkboxes
+                    var counter; //Setup counter
+                    var counterChecked; //Setup counterChecked
+                    $('.tbl_' + tbl + '_fb_cb_' + field).each(function () { //Iterate field filter checkboxes
+                        counter++; //Increment counter
+                        for (i = 0; i < pd.fieldfilterterms.length; i++) { //Iterate field filter terms
+                            if ($(this).attr('value') == pd.fieldfilterterms[i].term && field == pd.fieldfilterterms[i].field) { //If match on field and value
+                                counterChecked++; //Increment counter checked
+                                $(this).prop('checked', true); //Check box
+                            };
+                        };
+                    });
+                    if (counterChecked != counter) {
+                        $('#tbl_' + tbl + '_fb_' + field + '_icon').addClass('gowebtable-text-red'); //Add filter button color
+                    }
+                });
+            }
+        }
+
+        //Filter Box Function
+        $('.tblFilterBoxBtn').mouseover(function () {
+            field = $(this).attr('name');
+            fieldtype = $(this).attr('type');
+            if ($('#tbl_' + tbl + '_fb_' + field).is(':hidden')) {
+                $('.tblFilterBox').hide();
+                $('#tbl_' + tbl + '_fb_' + field).show();
+                filterBoxLoad(tbl, field, fieldtype);
+            } else {
+                $('#tbl_' + tbl + '_fb_' + field).hide();
+            }
+        });
+
+        //Filter Box Load
+        function filterBoxLoad(tbl, field, fieldtype) {
+            if (!$.trim($('#tbl_' + tbl + '_fb_' + field).html()).length) {
+                $('#tbl_' + tbl + '_fb_' + field).html('Loading')
+                $('#tbl_' + tbl + '_fb_' + field).load('/filterbox/' + fieldtype + '/' + field);
+            };
+        }
+
+        //BUTTON--------------------------------------------------------------
+
+        //ButtonGeneric
+        function pageButtonGeneric(page) {
+            $('.loader').fadeIn(100); //Load loader
+            pd.currentpage = page;
+            processPost();
+        };
 
         //btnFirst
-        if (page != 1) {
-            $('#' + tbl + '_btnFirst').click(function () {
-                page = 1;
-                doPost();
+        if (pd.pagecurrent != 1) {
+            $('#tbl_' + tbl + '_btnFirst').click(function () {
+                pageButtonGeneric(1);
             });
         } else {
-            $('#' + tbl + '_btnFirst').addClass('gowebtable-faded');
+            addClass('tbl_' + tbl + '_btnFirst','gowebtable-faded');
         };
 
         //btnPrevious
-        if (pagePrevious > 0) {
-            $('#' + tbl + '_btnPrevious').click(function () {
-                page = pagePrevious;
-                doPost();
+        if (pd.pageprevious > 0) {
+            $('#tbl_' + tbl + '_btnPrevious').click(function () {
+                pageButtonGeneric(pd.pageprevious);
             });
         } else {
-            $('#' + tbl + '_btnPrevious').addClass('gowebtable-faded');
+            addClass('tbl_' + tbl + '_btnPrevious','gowebtable-faded');
         };
 
         //btnNext
-        if (pageNext != page) {
-            $('#' + tbl + '_btnNext').click(function () {
-                page = pageNext;
-                doPost();
+        if (pd.pagenext != pd.pagecurrent) {
+            $('#tbl_' + tbl + '_btnNext').click(function () {
+                pageButtonGeneric(pd.pagenext);
             });
         } else {
-            $('#' + tbl + '_btnNext').addClass('gowebtable-faded');
+            addClass('tbl_' + tbl + '_btnNext','gowebtable-faded');
         };
 
         //btnLast
-        if (page != pageCount) {
-            $('#' + tbl + '_btnLast').click(function () {
-                page = pageCount;
-                doPost();
+        if (pd.pagecurrent != pd.pagecount) {
+            $('#tbl_' + tbl + '_btnLast').click(function () {
+                pageButtonGeneric(pd.pagecount);
             });
         } else {
-            $('#' + tbl + '_btnLast').addClass('gowebtable-faded');
+            addClass('tbl_' + tbl + '_btnLast','gowebtable-faded');
         };
-
-        //Filter
-        $('#' + tbl + '_btnFilterSearch').click(function () {
-            //filterElement = $('#' + tbl + '_Filter').attr('element');
-            filterTerm = $('#' + tbl + '_Filter').val();
-            doPost();
-        });
-
-
-        $('#' + tbl + '_btnFilterClear').click(function () {
-            filterTerm = '';
-            doPost();
-        });
-
-        //Arrows
-        $('#' + tbl + ' th').each(function (index, element) {
-            col = $(this).attr('col');
-            if (col == orderElement) {
-                $(this).addClass('gowebtable-th-highlight');
-                if (orderDirection == 'asc') {
-                    $(this).find("div").addClass('gowebtable-arrow-up');
-                } else {
-                    $(this).find("div").addClass('gowebtable-arrow-down');
-                }
-            }
-        });
 
     }
 
     doSortPrepare();
 
-    function doPost() {
+    function processPost() {
 
-        //Filter Terms
-        var filterTermsArray = [];
-        if (filterTerm != '') {
+        $('.loader').html('Loading').fadeIn(100);
 
-           // filterElement = $('#' + tbl + '_Filter').attr('element');
-            //alert(filterElement);
-            //filterTerm = $('#' + tbl + '_Filter').val();
-        
-            filterTermsArray = [{ 'element': filterElement, 'term': filterTerm }]
-        }
+        //Global Filter Term
+        var globalFilter = $('#tbl_' + pd.table + '_GlobalFilter').val();
+
+        //Field Filter Terms
+        var fieldFilter = [];
+        $('.tblFilterBox').each(function (i) {
+
+            var field = $(this).attr('name');
+            var fieldtype = $(this).attr('type');
+            var counter = 0;
+            var elementsChecked = [];
+
+            $('.tbl_fb_cb_' + field).each(function () {
+                counter++;
+                if ($(this).prop('checked')) {
+                    var element = { 'field': field, 'fieldtype': fieldtype, 'term': $(this).attr('value') };
+                    elementsChecked.push(element);
+                };
+            });
+
+            if (elementsChecked.length != counter) {
+                //Add selected elements to array
+                for (i = 0; i < elementsChecked.length; i++) {
+                    fieldFilter.push(elementsChecked[i]);
+                };
+            }
+
+        });
+
+        //Limit
+        var limit = $('#tbl_' + pd.table + '_Limit').val();
 
         //Order Terms
-        if (orderElement != '') {
-            var orderTermsArray = [{ 'element': orderElement, 'direction': orderDirection }]
+        if (pd.orderelement != '') {
+            var orderTermsArray = [{ 'element': pd.orderelement, 'direction': pd.orderdirection }]
         }
 
         //Build JSON
         var data = JSON.stringify({
+            'fieldfilterterms': fieldFilter,
+            'globalfilterterm': globalFilter,
             'orderterms': orderTermsArray,
-            'filterterms': filterTermsArray,
-            'page': parseInt(page),
+            'pagecurrent': parseInt(pd.currentpage),
             'limit': parseInt(limit),
         })
 
-        console.log(data);
+        $('#loader').fadeIn(100);
 
-        $.ajax({
-            url: url,
-            type: 'post',
-            contentType: 'application/json',
-            data: data,
-            processData: false,
-            success: function (data, textStatus, jQxhr) {
-                $('#' + target).html(data);
-            },
-            error: function (jqXhr, textStatus, errorThrown) {
-                console.log(errorThrown);
-            }
+        doPost(pd.url, data, function (result) {
+            $('#' + pd.target).html(result);
+            $('#loader').fadeOut(100);
         });
 
+    }
+
+    function doPost(url, data, cb) {
+        $.ajax({
+            'url': url,
+            'method': 'POST',
+            'dataType': 'html',
+            xhrFields: {
+                withCredentials: true
+            },
+            processData: false,
+            'contentType': 'application/json',
+            'data': data,
+            'success': function (result) {
+                cb(result);
+            },
+            error: function (e) {
+                console.log(e);
+            }
+        });
     }
 
 </script>

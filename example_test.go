@@ -1,4 +1,4 @@
-package gowebtable
+package main
 
 import (
 	"database/sql"
@@ -7,11 +7,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"text/template"
 
 	gwt "github.com/fishboy25uk/gowebtable"
-	"github.com/fatih/structs"
 	"github.com/gorilla/mux"
 	_ "github.com/herenow/go-crate"
 )
@@ -23,13 +21,12 @@ var (
 
 //Record is an example struct for a record
 type Record struct {
-	ID   string
-	Name string
-	Type string
+	ID   string `gowebtable:"id,ID,false" json:"id"`
+	Name string `gowebtable:"name,Name,false" json:"name"`
+	Type string `gowebtable:"type,Type,false" json:"type"`
 }
 
 func init() {
-	//Open DB
 	dbTemp, err := sql.Open("crate", crateURL)
 	if err != nil {
 		log.Fatal(err)
@@ -38,7 +35,7 @@ func init() {
 }
 
 func handlerIndex(w http.ResponseWriter, r *http.Request) {
-	
+
 	defer r.Body.Close()
 
 	info := make(map[string]interface{})
@@ -48,24 +45,20 @@ func handlerIndex(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ERROR: handlerIndex ExecuteTemplate - %s\n", err)
 	}
-	
+
 }
 
 func handlerData(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	//Define fields for table
-	fields := []gwt.TableField{
-		{Name: "id", Title: "ID", DBName: "id", Type: "string"},
-		{Name: "name", Title: "Name", DBName: "name", Type: "string"},
-		{Name: "type", Title: "Type", DBName: "type", Type: "string"},
-	}
+	//Crate PageDetails object with default limit options
+	pd := gwt.PageDetails{Table: "records", URL: "/data/", Target: "target"}
 
-	//Create PageDetails object
-	var pd gwt.PageDetails
+	//Set default order element
+	pd.OrderElementDefault = "name"
 
-	//Process post data (if present)
+	//Process POST request
 	if r.Method == "POST" {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -74,62 +67,41 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 		}
 		err = json.Unmarshal(body, &pd)
 		if err != nil {
-			log.Printf("ERROR: handlerExample Unmarshal PageDetails - %s\n", err)
+			log.Printf("ERROR: handlerMain unmarshal %s\n", err)
 		}
 	}
 
-	//Set PageDetails object parameters
-	pd.URL = "/data/"
-	pd.Target = "target"
-	pd.OrderDefaultElement = "name"
-	pd.FilterDefaultElement = "name"
-
-	//PreCalculate limit
-	pd.PreCalculate()
+	//Get struct fields and process page details filters
+	pd.PreProcess(&Record{})
 
 	//Get all records total
-	totalAll, err := selectRecordsTotalAll()
+	resultsCount, err := selectRecordsCount(&pd)
 	if err != nil {
 		log.Printf("ERROR: handlerExampleselectRecordsTotalAll - %s\n", err)
 	}
-	pd.TotalAll = totalAll
+	pd.RecordsTotal = resultsCount
 
-	//Get filtered records total
-	if len(pd.FilterTerms) > 0 {
+	pd.PageProcess()
 
-		totalFiltered, err := selectRecordsTotalFiltered(&pd)
-
-		if err != nil {
-			log.Printf("ERROR: handlerExampleselectRecordsTotalFiltered - %s\n", err)
-		}
-
-		pd.TotalFiltered = totalFiltered
-		pd.IsFiltered = true
+	var resultsRaw []Record
+	if pd.RecordsTotal == 0 {
+		resultsRaw = append(resultsRaw, Record{})
 	} else {
-		pd.TotalFiltered = totalAll
+		resultsRaw, err = selectRecords(&pd)
+		if err != nil {
+			log.Printf("ERROR: handlerData eventsSelect - %s", err)
+		}
 	}
 
-	//Calculate parameters
-	pd.Calculate()
+	//Process Results
+	pd.ResultsProcess(resultsRaw)
 
-	//Get records
-	records, err := selectRecords(&pd)
-	if err != nil {
-		log.Printf("ERROR: handlerExample selectRecords - %s\n", err)
-	}
-
-	//Convert records into a map slice
-	var recordsSlice [][]interface{}
-	for r := range records {
-		recordsSlice = append(recordsSlice, structs.Values(records[r]))
-	}
-
+	//Send PageDetails to template
 	info := make(map[string]interface{})
 	info["PageDetails"] = pd
-	info["Fields"] = fields
-	info["Records"] = recordsSlice
 
 	t, err := template.New("table").Parse(gwt.TemplateGet())
+	//t, err := template.ParseFiles("table.html")
 	if err != nil {
 		log.Printf("ERROR: handlerExample Parse Template - %s\n", err)
 	}
@@ -146,51 +118,11 @@ func selectRecords(pd *gwt.PageDetails) ([]Record, error) {
 	//Create records slice
 	var records []Record
 
-	//Filter Terms
-	filterString := ""
-	if len(pd.FilterTerms) > 0 {
-		for _, ft := range pd.FilterTerms {
-			if len(ft.Term) > 0 {
-
-				if len(filterString) == 0 {
-					filterString = " WHERE "
-				} else {
-					filterString += " AND "
-				}
-
-				//filterString += fmt.Sprintf("%s LIKE '%%%s%%'", ft.Element, ft.Term)
-				filterString += fmt.Sprintf("LOWER(%s) LIKE '%%%s%%'", ft.Element, strings.ToLower(ft.Term))
-
-			}
-		}
-	}
-
-	//Order
-	var ordersString string
-	if len(pd.OrderTerms) > 0 {
-		var ordersArray []string
-		for _, o := range pd.OrderTerms {
-
-			if o.Element == "" {
-				continue
-			}
-
-			ordersArray = append(ordersArray, fmt.Sprintf("%s %s", o.Element, strings.ToUpper(o.Direction)))
-
-		}
-		ordersString = " ORDER BY " + strings.Join(ordersArray, ",")
-	}
-
-	//Pagination String
-	paginationString := fmt.Sprintf(" LIMIT %v OFFSET %v", pd.Limit, pd.Offset)
-
 	//Build SQL string
-	sql := fmt.Sprintf("SELECT id,name,type FROM records%s%s%s", filterString, ordersString, paginationString)
-
-	//fmt.Println(sql)
+	sql := fmt.Sprintf("SELECT id,name,type FROM records%s%s LIMIT ? OFFSET ?", pd.FilterSQLString, pd.OrderTermsString)
 
 	//Perform SQL query
-	rows, err := db.Query(sql)
+	rows, err := db.Query(sql, pd.Limit, pd.Offset)
 	if err != nil {
 		return records, err
 	}
@@ -209,68 +141,26 @@ func selectRecords(pd *gwt.PageDetails) ([]Record, error) {
 	}
 	rows.Close()
 
-	//Return records
 	return records, nil
 
 }
 
-func selectRecordsTotalAll() (int, error) {
-
-	//Build SQL string
-	sql := fmt.Sprintf("SELECT COUNT(*) FROM records")
-	//fmt.Println(sql)
-
-	//Perform SQL query
-	var count int
-	err := db.QueryRow(sql).Scan(&count)
+func selectRecordsCount(pd *gwt.PageDetails) (int, error) {
+	var total int
+	sql := fmt.Sprintf("SELECT COUNT(*) FROM records%s", pd.FilterSQLString)
+	err := db.QueryRow(sql).Scan(&total)
 	if err != nil {
-		return count, err
+		return total, err
 	}
-
-	//Return records
-	return count, nil
-
-}
-
-func selectRecordsTotalFiltered(pd *gwt.PageDetails) (int, error) {
-
-	//Filter Terms
-	filterString := ""
-	if len(pd.FilterTerms) > 0 {
-		for _, ft := range pd.FilterTerms {
-			if len(ft.Term) > 0 {
-
-				if len(filterString) == 0 {
-					filterString = " WHERE "
-				} else {
-					filterString += " AND "
-				}
-
-				filterString += fmt.Sprintf("LOWER(%s) LIKE '%%%s%%'", ft.Element, strings.ToLower(ft.Term))
-			}
-		}
-	}
-
-	//Build SQL string
-	sql := fmt.Sprintf("SELECT COUNT(*) FROM records%s", filterString)
-	//fmt.Println(sql)
-
-	//Perform SQL query
-	var count int
-	err := db.QueryRow(sql).Scan(&count)
-	if err != nil {
-		return count, err
-	}
-
-	//Return records
-	return count, nil
-
+	return total, nil
 }
 
 func main() {
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", handlerIndex)
 	r.HandleFunc("/data/", handlerData)
 
 	log.Fatal(http.ListenAndServe(":80", r))
+
 }

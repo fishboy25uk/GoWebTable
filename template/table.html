@@ -33,9 +33,11 @@
         <thead>
             <tr>
                 {{range .PageDetails.Fields}}
+                {{if not .Hide}}
                 <th col="{{.Name}}" sort="">{{.Header}}<span class="gowebtable-icon-container">
                         <div id="tbl_{{$.PageDetails.Table}}_{{.Name}}_icon" class="gowebtable-icon"></div>
                     </span></th>
+                {{end}}
                 {{end}}
             </tr>
             {{if eq .PageDetails.FieldFiltersEnabled true}}
